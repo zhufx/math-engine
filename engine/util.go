@@ -4,26 +4,27 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/big"
 	"strconv"
 	"strings"
+
+	"github.com/shopspring/decimal"
 )
 
 // Top level function
 // Analytical expression and execution
 // err is not nil if an error occurs (including arithmetic runtime errors)
-func ParseAndExec(s string) (r float64, err error) {
+func ParseAndExec(s string) (r decimal.Decimal, err error) {
 	toks, err := Parse(s)
 	if err != nil {
-		return 0, err
+		return decimal.Zero, err
 	}
 	ast := NewAST(toks, s)
 	if ast.Err != nil {
-		return 0, ast.Err
+		return decimal.Zero, ast.Err
 	}
 	ar := ast.ParseExpression()
 	if ast.Err != nil {
-		return 0, ast.Err
+		return decimal.Zero, ast.Err
 	}
 	defer func() {
 		if e := recover(); e != nil {
@@ -48,13 +49,14 @@ func Pow(x float64, n float64) float64 {
 	return math.Pow(x, n)
 }
 
-func expr2Radian(expr ExprAST) float64 {
-	r := ExprASTResult(expr)
-	if TrigonometricMode == AngleMode {
-		r = r / 180 * math.Pi
-	}
-	return r
-}
+//
+// func expr2Radian(expr ExprAST) float64 {
+// 	r := ExprASTResult(expr)
+// 	if TrigonometricMode == AngleMode {
+// 		r = r / 180 * math.Pi
+// 	}
+// 	return r
+// }
 
 // Float64ToStr float64 -> string
 func Float64ToStr(f float64) string {
@@ -67,7 +69,7 @@ func Float64ToStr(f float64) string {
 // argc: this is a number of parameter signatures. should be -1, 0, or a positive integer
 //       -1 variable-length argument; >=0 fixed numbers argument
 // fun:  function handler
-func RegFunction(name string, argc int, fun func(...ExprAST) float64) error {
+func RegFunction(name string, argc int, fun func(...ExprAST) decimal.Decimal) error {
 	if len(name) == 0 {
 		return errors.New("RegFunction name is not empty")
 	}
@@ -84,8 +86,8 @@ func RegFunction(name string, argc int, fun func(...ExprAST) float64) error {
 // ExprASTResult is a Top level function
 // AST traversal
 // if an arithmetic runtime error occurs, a panic exception is thrown
-func ExprASTResult(expr ExprAST) float64 {
-	var l, r float64
+func ExprASTResult(expr ExprAST) decimal.Decimal {
+	var l, r decimal.Decimal
 	switch expr.(type) {
 	case BinaryExprAST:
 		ast := expr.(BinaryExprAST)
@@ -93,37 +95,29 @@ func ExprASTResult(expr ExprAST) float64 {
 		r = ExprASTResult(ast.Rhs)
 		switch ast.Op {
 		case "+":
-			lh, _ := new(big.Float).SetString(Float64ToStr(l))
-			rh, _ := new(big.Float).SetString(Float64ToStr(r))
-			f, _ := new(big.Float).Add(lh, rh).Float64()
-			return f
+			return l.Add(r)
 		case "-":
-			lh, _ := new(big.Float).SetString(Float64ToStr(l))
-			rh, _ := new(big.Float).SetString(Float64ToStr(r))
-			f, _ := new(big.Float).Sub(lh, rh).Float64()
-			return f
+			return l.Sub(r)
 		case "*":
-			f, _ := new(big.Float).Mul(new(big.Float).SetFloat64(l), new(big.Float).SetFloat64(r)).Float64()
-			return f
+			return l.Mul(r)
 		case "/":
-			if r == 0 {
+			if r.IsZero() {
 				panic(errors.New(
 					fmt.Sprintf("violation of arithmetic specification: a division by zero in ExprASTResult: [%g/%g]",
 						l,
 						r)))
 			}
-			f, _ := new(big.Float).Quo(new(big.Float).SetFloat64(l), new(big.Float).SetFloat64(r)).Float64()
-			return f
+			return l.Div(r)
 		case "%":
-			if r == 0 {
+			if r.IsZero() {
 				panic(errors.New(
 					fmt.Sprintf("violation of arithmetic specification: a division by zero in ExprASTResult: [%g%%%g]",
 						l,
 						r)))
 			}
-			return float64(int(l) % int(r))
+			return l.Mod(r)
 		case "^":
-			return Pow(l, r)
+			return l.Pow(r)
 		default:
 
 		}
@@ -135,5 +129,5 @@ func ExprASTResult(expr ExprAST) float64 {
 		return def.fun(f.Arg...)
 	}
 
-	return 0.0
+	return decimal.Zero
 }

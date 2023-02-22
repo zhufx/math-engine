@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/dengsgo/math-engine/engine"
+	"github.com/shopspring/decimal"
 )
 
 func main() {
@@ -16,8 +17,8 @@ func main() {
 
 // input loop
 func loop() {
-	engine.RegFunction("double", 1, func(expr ...engine.ExprAST) float64 {
-		return engine.ExprASTResult(expr[0]) * 2
+	engine.RegFunction("double", 1, func(expr ...engine.ExprAST) decimal.Decimal {
+		return engine.ExprASTResult(expr[0]).Mul(decimal.NewFromInt(2))
 	})
 	for {
 		fmt.Print("input /> ")

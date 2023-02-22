@@ -4,12 +4,14 @@ import (
 	"math/rand"
 	"testing"
 	"time"
+
+	"github.com/shopspring/decimal"
 )
 
 func TestParseAndExecSimple(t *testing.T) {
 	type U struct {
 		Expr string
-		R    float64
+		R    decimal.Decimal
 	}
 	exprs := []U{
 		{"1", 1},
@@ -180,7 +182,6 @@ func TestRegFunction(t *testing.T) {
 			t.Error(err, "RegFunction errors when register new function: ", f.Name)
 		}
 	}
-
 }
 
 func TestParseAndExecError(t *testing.T) {

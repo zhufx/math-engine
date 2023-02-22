@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+
+	"github.com/shopspring/decimal"
 )
 
 var precedence = map[string]int{"+": 20, "-": 20, "*": 40, "/": 40, "%": 40, "^": 60}
@@ -13,7 +15,7 @@ type ExprAST interface {
 }
 
 type NumberExprAST struct {
-	Val float64
+	Val decimal.Decimal
 	Str string
 }
 
@@ -106,7 +108,7 @@ func (a *AST) getTokPrecedence() int {
 }
 
 func (a *AST) parseNumber() NumberExprAST {
-	f64, err := strconv.ParseFloat(a.currTok.Tok, 64)
+	val, err := decimal.NewFromString(a.currTok.Tok)
 	if err != nil {
 		a.Err = errors.New(
 			fmt.Sprintf("%v\nwant '(' or '0-9' but get '%s'\n%s",
@@ -116,7 +118,7 @@ func (a *AST) parseNumber() NumberExprAST {
 		return NumberExprAST{}
 	}
 	n := NumberExprAST{
-		Val: f64,
+		Val: val,
 		Str: a.currTok.Tok,
 	}
 	a.getNextToken()
@@ -167,7 +169,7 @@ func (a *AST) parseFunCallerOrConst() ExprAST {
 	// call const
 	if v, ok := defConst[name]; ok {
 		return NumberExprAST{
-			Val: v,
+			Val: decimal.NewFromFloat(v),
 			Str: strconv.FormatFloat(v, 'f', 0, 64),
 		}
 	} else {
